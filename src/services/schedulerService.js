@@ -11,40 +11,40 @@ class SchedulerService {
 
   async start() {
     if (this.isRunning) {
-      console.log('Programador ya está ejecutándose');
+      console.log('Scheduler already running');
       return;
     }
 
-    console.log('Iniciando programador de respaldos...');
+    console.log('Starting backup scheduler...');
     this.isRunning = true;
 
-    // Inicializar directorio de respaldos
+    // Initialize backup directory
     await this.backupService.ensureBackupDirectory();
 
-    // Verificar oportunidades de recuperación
+    // Check for recovery opportunities
     await this.backupService.checkAndRecoverJobs();
 
-    // Iniciar el programador principal que verifica trabajos cada minuto
+    // Start the main scheduler that checks for jobs every minute
     this.mainScheduler = cron.schedule('* * * * *', async () => {
       await this.checkAndRunJobs();
     });
 
-    console.log('Programador de respaldos iniciado exitosamente');
+    console.log('Backup scheduler started successfully');
   }
 
   async stop() {
     if (!this.isRunning) {
-      console.log('Programador no está ejecutándose');
+      console.log('Scheduler not running');
       return;
     }
 
-    console.log('Deteniendo programador de respaldos...');
+    console.log('Stopping backup scheduler...');
     
     if (this.mainScheduler) {
       this.mainScheduler.stop();
     }
 
-    // Detener todos los programadores de trabajos activos
+    // Stop all active job schedulers
     this.activeJobs.forEach((scheduler, jobId) => {
       scheduler.stop();
     });
@@ -52,7 +52,7 @@ class SchedulerService {
     this.activeJobs.clear();
     this.isRunning = false;
     
-    console.log('Programador de respaldos detenido');
+    console.log('Backup scheduler stopped');
   }
 
   async checkAndRunJobs() {
@@ -69,20 +69,20 @@ class SchedulerService {
         await this.scheduleJob(job);
       }
     } catch (error) {
-      console.error('Error verificando trabajos:', error);
+      console.error('Error checking jobs:', error);
     }
   }
 
   async scheduleJob(job) {
     const { id, frequency_minutes, last_run } = job;
 
-    // Verificar si el trabajo debe ejecutarse basado en la frecuencia
+    // Check if job should run based on frequency
     if (this.shouldRunJob(job)) {
-      console.log(`Ejecutando trabajo de respaldo ${id}...`);
+      console.log(`Running backup job ${id}...`);
       
-      // Ejecutar el respaldo (no esperar para permitir ejecución en paralelo)
+      // Run the backup (don't await to allow parallel execution)
       this.backupService.performBackup(job).catch(error => {
-        console.error(`Error en trabajo de respaldo ${id}:`, error);
+        console.error(`Error in backup job ${id}:`, error);
       });
     }
   }
@@ -90,17 +90,17 @@ class SchedulerService {
   shouldRunJob(job) {
     const { frequency_minutes, last_run, status } = job;
     
-    // No ejecutar si ya se está ejecutando
+    // Don't run if already running
     if (status === 'running') {
       return false;
     }
 
-    // Si nunca se ha ejecutado, debe ejecutarse ahora
+    // If never run, should run now
     if (!last_run) {
       return true;
     }
 
-    // Verificar si ha pasado suficiente tiempo desde la última ejecución
+    // Check if enough time has passed since last run
     const lastRunTime = new Date(last_run);
     const now = new Date();
     const timeDiff = now - lastRunTime;

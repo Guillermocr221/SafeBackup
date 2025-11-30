@@ -1,7 +1,7 @@
 const { getDB } = require('../db/sqlite');
 
 const backupController = {
-  // Obtener todos los trabajos de respaldo
+  // Get all backup jobs
   async getJobs(req, res) {
     try {
       const db = getDB();
@@ -18,7 +18,7 @@ const backupController = {
     }
   },
 
-  // Crear nuevo trabajo de respaldo
+  // Create new backup job
   async createJob(req, res) {
     try {
       const { folder_path, frequency_minutes } = req.body;
@@ -39,7 +39,7 @@ const backupController = {
         );
       });
 
-      // Registrar la creación del trabajo
+      // Log job creation
       await new Promise((resolve, reject) => {
         db.run(
           'INSERT INTO logs (job_id, message, level, timestamp) VALUES (?, ?, ?, ?)',
@@ -58,7 +58,7 @@ const backupController = {
     }
   },
 
-  // Actualizar trabajo de respaldo
+  // Update backup job
   async updateJob(req, res) {
     try {
       const { id } = req.params;
@@ -83,7 +83,7 @@ const backupController = {
     }
   },
 
-  // Eliminar trabajo de respaldo
+  // Delete backup job
   async deleteJob(req, res) {
     try {
       const { id } = req.params;
@@ -103,7 +103,7 @@ const backupController = {
     }
   },
 
-  // Obtener registros (logs)
+  // Get logs
   async getLogs(req, res) {
     try {
       const db = getDB();

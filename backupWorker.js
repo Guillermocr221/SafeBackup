@@ -5,38 +5,38 @@ let scheduler;
 
 async function startBackupWorker() {
   try {
-    console.log('Inicializando worker de respaldo...');
+    console.log('Initializing backup worker...');
     
-    // Inicializar conexión a la base de datos
+    // Initialize database connection
     await initDatabase();
-    console.log('Base de datos conectada');
+    console.log('Database connected');
     
-    // Iniciar el servicio de programación
+    // Start the scheduler service
     scheduler = new SchedulerService();
     await scheduler.start();
     
-    console.log('Worker de respaldo iniciado exitosamente');
+    console.log('Backup worker started successfully');
     
-    // Manejar cierre elegante
+    // Handle graceful shutdown
     process.on('SIGINT', gracefulShutdown);
     process.on('SIGTERM', gracefulShutdown);
     
   } catch (error) {
-    console.error('Error al iniciar worker de respaldo:', error);
+    console.error('Failed to start backup worker:', error);
     process.exit(1);
   }
 }
 
 async function gracefulShutdown() {
-  console.log('Señal de cierre recibida, deteniendo worker de respaldo...');
+  console.log('Received shutdown signal, stopping backup worker...');
   
   if (scheduler) {
     await scheduler.stop();
   }
   
-  console.log('Worker de respaldo detenido elegantemente');
+  console.log('Backup worker stopped gracefully');
   process.exit(0);
 }
 
-// Iniciar el worker
+// Start the worker
 startBackupWorker();

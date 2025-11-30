@@ -4,14 +4,14 @@ const { promisify } = require('util');
 const execAsync = promisify(exec);
 
 const pm2Controller = {
-  // Obtener estado del servicio PM2
+  // Get PM2 service status
   async getStatus(req, res) {
     try {
-      // Usar pm2 jlist para salida JSON, que es más confiable
+      // Use pm2 jlist for JSON output, which is more reliable
       const { stdout } = await execAsync('pm2 jlist');
       const processes = JSON.parse(stdout);
       
-      // Encontrar el proceso backup-worker
+      // Find the backup-worker process
       const backupWorker = processes.find(proc => proc.name === 'backup-worker');
       
       if (backupWorker) {
@@ -41,10 +41,10 @@ const pm2Controller = {
     }
   },
 
-  // Iniciar servicio de respaldo
+  // Start backup service
   async startService(req, res) {
     try {
-      // Primero verificar si el proceso ya existe
+      // First check if the process already exists
       try {
         const { stdout: listOutput } = await execAsync('pm2 jlist');
         const processes = JSON.parse(listOutput);
@@ -58,7 +58,7 @@ const pm2Controller = {
         }
         
         if (existingProcess && existingProcess.pm2_env.status === 'stopped') {
-          // Reiniciar proceso existente
+          // Restart existing process
           const { stdout } = await execAsync('pm2 restart backup-worker');
           return res.json({
             message: 'Backup service restarted successfully',
@@ -66,10 +66,10 @@ const pm2Controller = {
           });
         }
       } catch (listError) {
-        // Continuar para iniciar nuevo proceso si la lista falla
+        // Continue to start new process if listing fails
       }
       
-      // Iniciar nuevo proceso
+      // Start new process
       const { stdout } = await execAsync('pm2 start ecosystem.config.js');
       res.json({
         message: 'Backup service started successfully',
@@ -84,7 +84,7 @@ const pm2Controller = {
     }
   },
 
-  // Detener servicio de respaldo
+  // Stop backup service
   async stopService(req, res) {
     try {
       const { stdout } = await execAsync('pm2 stop backup-worker');
@@ -95,7 +95,7 @@ const pm2Controller = {
     } catch (error) {
       console.error('Error stopping service:', error);
       
-      // Verificar si el error es porque el proceso no existe
+      // Check if the error is because process doesn't exist
       if (error.message.includes('process name not found')) {
         res.json({
           message: 'Backup service was not running',
@@ -110,7 +110,7 @@ const pm2Controller = {
     }
   },
 
-  // Reiniciar servicio de respaldo
+  // Restart backup service
   async restartService(req, res) {
     try {
       const { stdout } = await execAsync('pm2 restart backup-worker');
@@ -121,7 +121,7 @@ const pm2Controller = {
     } catch (error) {
       console.error('Error restarting service:', error);
       
-      // Si el reinicio falla, intentar iniciar en su lugar
+      // If restart fails, try to start instead
       try {
         const { stdout: startOutput } = await execAsync('pm2 start ecosystem.config.js');
         res.json({

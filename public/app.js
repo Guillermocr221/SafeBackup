@@ -1,409 +1,345 @@
-// Variables globales para la aplicación
-let jobs = [];
-let editingJobId = null;
-
-// URLs de la API
+// API Base URL
 const API_BASE = '/api';
-const API_ENDPOINTS = {
-    jobs: `${API_BASE}/jobs`,
-    pm2Status: `${API_BASE}/pm2/status`,
-    pm2Start: `${API_BASE}/pm2/start`,
-    pm2Stop: `${API_BASE}/pm2/stop`,
-    pm2Restart: `${API_BASE}/pm2/restart`,
-    logs: `${API_BASE}/logs`
-};
 
-// Inicializar la aplicación cuando el DOM esté listo
+// Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
-});
-
-// Función principal de inicialización
-async function initializeApp() {
-    try {
-        // Configurar eventos de la interfaz
-        setupEventListeners();
-        
-        // Cargar datos iniciales
-        await loadInitialData();
-        
-        // Configurar actualizaciones automáticas
-        setupAutoRefresh();
-        
-        showNotification('Aplicación inicializada correctamente', 'success');
-    } catch (error) {
-        console.error('Error inicializando aplicación:', error);
-        showNotification('Error al inicializar la aplicación', 'error');
-    }
-}
-
-// Configurar todos los event listeners
-function setupEventListeners() {
-    // Botones de control del servicio
-    document.getElementById('startService').addEventListener('click', startService);
-    document.getElementById('stopService').addEventListener('click', stopService);
-    document.getElementById('restartService').addEventListener('click', restartService);
+    checkStatus();
+    loadJobs();
+    loadLogs();
     
-    // Modal de trabajos
-    document.getElementById('addJobBtn').addEventListener('click', openJobModal);
-    document.getElementById('closeModal').addEventListener('click', closeJobModal);
-    document.getElementById('cancelJob').addEventListener('click', closeJobModal);
+    // Set up form submission
     document.getElementById('jobForm').addEventListener('submit', handleJobSubmit);
     
-    // Cerrar modal haciendo clic fuera de él
-    document.getElementById('jobModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeJobModal();
-        }
+    // Auto-refresh every 30 seconds
+    setInterval(() => {
+        checkStatus();
+        loadJobs();
+    }, 30000);
+});
+
+// Tab Management
+function showTab(tabName) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
     });
-}
-
-// Cargar datos iniciales
-async function loadInitialData() {
-    await Promise.all([
-        checkServiceStatus(),
-        loadJobs(),
-        loadLogs()
-    ]);
-}
-
-// Configurar actualizaciones automáticas
-function setupAutoRefresh() {
-    // Actualizar estado del servicio cada 10 segundos
-    setInterval(checkServiceStatus, 10000);
     
-    // Actualizar trabajos cada 30 segundos
-    setInterval(loadJobs, 30000);
+    // Remove active class from all tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
     
-    // Actualizar registros cada 30 segundos
-    setInterval(loadLogs, 30000);
+    // Show selected tab content
+    document.getElementById(tabName + 'Tab').classList.add('active');
+    
+    // Add active class to clicked tab
+    event.target.classList.add('active');
+    
+    // Load data for the active tab
+    if (tabName === 'logs') {
+        loadLogs();
+    } else if (tabName === 'jobs') {
+        loadJobs();
+    }
 }
 
-// === FUNCIONES DEL SERVICIO PM2 ===
-
-async function checkServiceStatus() {
+// Service Management Functions
+async function checkStatus() {
     try {
-        const response = await fetch(API_ENDPOINTS.pm2Status);
+        const response = await fetch(`${API_BASE}/service/status`);
         const data = await response.json();
         
-        updateServiceStatus(data.status, data.details);
+        const statusElement = document.getElementById('serviceStatus');
+        if (data.status === 'online') {
+            statusElement.textContent = 'En Línea';
+            statusElement.className = 'status-indicator status-online';
+        } else {
+            statusElement.textContent = 'Desconectado';
+            statusElement.className = 'status-indicator status-offline';
+        }
     } catch (error) {
-        console.error('Error verificando estado del servicio:', error);
-        updateServiceStatus('offline', { error: 'No se pudo conectar al servicio' });
-    }
-}
-
-function updateServiceStatus(status, details) {
-    const indicator = document.getElementById('statusIndicator');
-    const statusText = document.getElementById('statusText');
-    const serviceInfo = document.getElementById('serviceInfo');
-    
-    // Actualizar indicador visual
-    indicator.className = 'status-indicator';
-    if (status === 'online') {
-        indicator.classList.add('online');
-        statusText.textContent = 'Servicio en Línea';
-    } else {
-        indicator.classList.add('offline');
-        statusText.textContent = 'Servicio Fuera de Línea';
-    }
-    
-    // Mostrar detalles del servicio si están disponibles
-    if (details && typeof details === 'object') {
-        let infoHTML = '<h4>Detalles del Servicio:</h4><ul>';
-        
-        if (details.status) infoHTML += `<li><strong>Estado:</strong> ${details.status}</li>`;
-        if (details.uptime) infoHTML += `<li><strong>Tiempo Activo:</strong> ${formatUptime(details.uptime)}</li>`;
-        if (details.restarts !== undefined) infoHTML += `<li><strong>Reinicios:</strong> ${details.restarts}</li>`;
-        if (details.memory) infoHTML += `<li><strong>Memoria:</strong> ${formatBytes(details.memory)}</li>`;
-        if (details.cpu !== undefined) infoHTML += `<li><strong>CPU:</strong> ${details.cpu}%</li>`;
-        
-        infoHTML += '</ul>';
-        serviceInfo.innerHTML = infoHTML;
-    } else if (details && typeof details === 'string') {
-        serviceInfo.innerHTML = `<p><strong>Estado:</strong> ${details}</p>`;
+        console.error('Error checking status:', error);
+        const statusElement = document.getElementById('serviceStatus');
+        statusElement.textContent = 'Error';
+        statusElement.className = 'status-indicator status-offline';
     }
 }
 
 async function startService() {
     try {
-        showNotification('Iniciando servicio...', 'info');
-        const response = await fetch(API_ENDPOINTS.pm2Start, { method: 'POST' });
+        const response = await fetch(`${API_BASE}/service/start`, {
+            method: 'POST'
+        });
         const data = await response.json();
         
-        showNotification(data.message || 'Servicio iniciado', 'success');
-        await checkServiceStatus();
+        if (response.ok) {
+            showNotification('Servicio iniciado correctamente', 'success');
+            setTimeout(checkStatus, 2000);
+        } else {
+            showNotification(data.error || 'Error iniciando servicio', 'error');
+        }
     } catch (error) {
-        console.error('Error iniciando servicio:', error);
-        showNotification('Error al iniciar el servicio', 'error');
+        console.error('Error starting service:', error);
+        showNotification('Error conectando con el servidor', 'error');
     }
 }
 
 async function stopService() {
     try {
-        showNotification('Deteniendo servicio...', 'info');
-        const response = await fetch(API_ENDPOINTS.pm2Stop, { method: 'POST' });
+        const response = await fetch(`${API_BASE}/service/stop`, {
+            method: 'POST'
+        });
         const data = await response.json();
         
-        showNotification(data.message || 'Servicio detenido', 'success');
-        await checkServiceStatus();
+        if (response.ok) {
+            showNotification('Servicio detenido correctamente', 'success');
+            setTimeout(checkStatus, 2000);
+        } else {
+            showNotification(data.error || 'Error deteniendo servicio', 'error');
+        }
     } catch (error) {
-        console.error('Error deteniendo servicio:', error);
-        showNotification('Error al detener el servicio', 'error');
+        console.error('Error stopping service:', error);
+        showNotification('Error conectando con el servidor', 'error');
     }
 }
 
 async function restartService() {
     try {
-        showNotification('Reiniciando servicio...', 'info');
-        const response = await fetch(API_ENDPOINTS.pm2Restart, { method: 'POST' });
+        const response = await fetch(`${API_BASE}/service/restart`, {
+            method: 'POST'
+        });
         const data = await response.json();
         
-        showNotification(data.message || 'Servicio reiniciado', 'success');
-        await checkServiceStatus();
+        if (response.ok) {
+            showNotification('Servicio reiniciado correctamente', 'success');
+            setTimeout(checkStatus, 2000);
+        } else {
+            showNotification(data.error || 'Error reiniciando servicio', 'error');
+        }
     } catch (error) {
-        console.error('Error reiniciando servicio:', error);
-        showNotification('Error al reiniciar el servicio', 'error');
+        console.error('Error restarting service:', error);
+        showNotification('Error conectando con el servidor', 'error');
     }
 }
 
-// === FUNCIONES DE TRABAJOS ===
-
+// Job Management Functions
 async function loadJobs() {
     try {
-        const response = await fetch(API_ENDPOINTS.jobs);
-        jobs = await response.json();
-        renderJobs();
+        const response = await fetch(`${API_BASE}/jobs`);
+        const jobs = await response.json();
+        
+        displayJobs(jobs);
     } catch (error) {
-        console.error('Error cargando trabajos:', error);
-        showNotification('Error al cargar los trabajos', 'error');
+        console.error('Error loading jobs:', error);
+        document.getElementById('jobsList').innerHTML = '<p>Error cargando tareas</p>';
     }
 }
 
-function renderJobs() {
-    const grid = document.getElementById('jobsGrid');
+function displayJobs(jobs) {
+    const jobsList = document.getElementById('jobsList');
     
     if (jobs.length === 0) {
-        grid.innerHTML = '<div class="no-jobs">No hay trabajos de respaldo configurados</div>';
+        jobsList.innerHTML = '<p>No hay tareas configuradas</p>';
         return;
     }
     
-    grid.innerHTML = jobs.map(job => `
-        <div class="job-card ${job.active ? 'active' : 'inactive'}">
-            <div class="job-header">
-                <h3>📁 Trabajo ${job.id}</h3>
-                <div class="job-status status-${job.status || 'pending'}">${getStatusText(job.status)}</div>
+    jobsList.innerHTML = jobs.map(job => `
+        <div class="job-card">
+            <div style="display: flex; justify-content: between-content; align-items: center; margin-bottom: 10px;">
+                <h4>Tarea #${job.id}</h4>
+                <span class="job-status status-${job.status}">${getStatusText(job.status)}</span>
             </div>
-            <div class="job-details">
-                <p><strong>Carpeta:</strong> ${job.folder_path}</p>
-                <p><strong>Frecuencia:</strong> ${job.frequency_minutes} minutos</p>
-                <p><strong>Última ejecución:</strong> ${job.last_run ? formatDateTime(job.last_run) : 'Nunca'}</p>
-                <p><strong>Reintentos:</strong> ${job.retries || 0}</p>
-            </div>
-            <div class="job-actions">
-                <button onclick="editJob(${job.id})" class="btn btn-sm btn-primary">✏️ Editar</button>
-                <button onclick="toggleJob(${job.id}, ${!job.active})" class="btn btn-sm ${job.active ? 'btn-warning' : 'btn-success'}">
-                    ${job.active ? '⏸️ Pausar' : '▶️ Activar'}
+            <p><strong>Carpeta:</strong> ${job.folder_path}</p>
+            <p><strong>Frecuencia:</strong> ${job.frequency_minutes} minutos</p>
+            <p><strong>Último respaldo:</strong> ${job.last_run ? new Date(job.last_run).toLocaleString() : 'Nunca'}</p>
+            <p><strong>Reintentos:</strong> ${job.retries}</p>
+            <div style="margin-top: 10px;">
+                <button class="btn btn-warning" onclick="toggleJob(${job.id}, ${job.active})">
+                    ${job.active ? 'Desactivar' : 'Activar'}
                 </button>
-                <button onclick="deleteJob(${job.id})" class="btn btn-sm btn-danger">🗑️ Eliminar</button>
+                <button class="btn btn-danger" onclick="deleteJob(${job.id})">Eliminar</button>
             </div>
         </div>
     `).join('');
-}
-
-function openJobModal(jobId = null) {
-    const modal = document.getElementById('jobModal');
-    const title = document.getElementById('modalTitle');
-    const form = document.getElementById('jobForm');
-    
-    editingJobId = jobId;
-    
-    if (jobId) {
-        const job = jobs.find(j => j.id === jobId);
-        title.textContent = 'Editar Trabajo de Respaldo';
-        document.getElementById('folderPath').value = job.folder_path;
-        document.getElementById('frequency').value = job.frequency_minutes;
-    } else {
-        title.textContent = 'Nuevo Trabajo de Respaldo';
-        form.reset();
-    }
-    
-    modal.style.display = 'block';
-}
-
-function closeJobModal() {
-    document.getElementById('jobModal').style.display = 'none';
-    editingJobId = null;
-}
-
-async function handleJobSubmit(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(e.target);
-    const jobData = {
-        folder_path: formData.get('folderPath'),
-        frequency_minutes: parseInt(formData.get('frequency'))
-    };
-    
-    try {
-        let response;
-        if (editingJobId) {
-            response = await fetch(`${API_ENDPOINTS.jobs}/${editingJobId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(jobData)
-            });
-        } else {
-            response = await fetch(API_ENDPOINTS.jobs, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(jobData)
-            });
-        }
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            showNotification(editingJobId ? 'Trabajo actualizado exitosamente' : 'Trabajo creado exitosamente', 'success');
-            closeJobModal();
-            await loadJobs();
-        } else {
-            showNotification(result.error || 'Error al guardar el trabajo', 'error');
-        }
-    } catch (error) {
-        console.error('Error guardando trabajo:', error);
-        showNotification('Error al guardar el trabajo', 'error');
-    }
-}
-
-async function toggleJob(jobId, active) {
-    try {
-        const response = await fetch(`${API_ENDPOINTS.jobs}/${jobId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ active })
-        });
-        
-        if (response.ok) {
-            showNotification(`Trabajo ${active ? 'activado' : 'pausado'} exitosamente`, 'success');
-            await loadJobs();
-        } else {
-            const error = await response.json();
-            showNotification(error.error || 'Error al actualizar el trabajo', 'error');
-        }
-    } catch (error) {
-        console.error('Error actualizando trabajo:', error);
-        showNotification('Error al actualizar el trabajo', 'error');
-    }
-}
-
-async function deleteJob(jobId) {
-    if (!confirm('¿Está seguro de que desea eliminar este trabajo de respaldo?')) {
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_ENDPOINTS.jobs}/${jobId}`, {
-            method: 'DELETE'
-        });
-        
-        if (response.ok) {
-            showNotification('Trabajo eliminado exitosamente', 'success');
-            await loadJobs();
-        } else {
-            const error = await response.json();
-            showNotification(error.error || 'Error al eliminar el trabajo', 'error');
-        }
-    } catch (error) {
-        console.error('Error eliminando trabajo:', error);
-        showNotification('Error al eliminar el trabajo', 'error');
-    }
-}
-
-function editJob(jobId) {
-    openJobModal(jobId);
-}
-
-// === FUNCIONES DE REGISTROS ===
-
-async function loadLogs() {
-    try {
-        const response = await fetch(API_ENDPOINTS.logs);
-        const logs = await response.json();
-        renderLogs(logs);
-    } catch (error) {
-        console.error('Error cargando registros:', error);
-        showNotification('Error al cargar los registros', 'error');
-    }
-}
-
-function renderLogs(logs) {
-    const container = document.getElementById('logsContainer');
-    
-    if (logs.length === 0) {
-        container.innerHTML = '<div class="no-logs">No hay registros disponibles</div>';
-        return;
-    }
-    
-    container.innerHTML = logs.map(log => `
-        <div class="log-entry level-${log.level}">
-            <div class="log-header">
-                <span class="log-timestamp">${formatDateTime(log.timestamp)}</span>
-                <span class="log-level">${log.level.toUpperCase()}</span>
-                ${log.folder_path ? `<span class="log-job">Trabajo: ${log.folder_path}</span>` : ''}
-            </div>
-            <div class="log-message">${log.message}</div>
-        </div>
-    `).join('');
-}
-
-// === FUNCIONES DE UTILIDAD ===
-
-function showNotification(message, type = 'info') {
-    const container = document.getElementById('notifications');
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-    notification.textContent = message;
-    
-    container.appendChild(notification);
-    
-    // Remover notificación después de 5 segundos
-    setTimeout(() => {
-        notification.remove();
-    }, 5000);
-}
-
-function formatDateTime(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleString('es-ES');
-}
-
-function formatUptime(uptime) {
-    const seconds = Math.floor(uptime / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    
-    if (days > 0) return `${days}d ${hours % 24}h ${minutes % 60}m`;
-    if (hours > 0) return `${hours}h ${minutes % 60}m`;
-    if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
-    return `${seconds}s`;
-}
-
-function formatBytes(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
 function getStatusText(status) {
     const statusMap = {
         'pending': 'Pendiente',
-        'running': 'Ejecutándose',
-        'ok': 'Exitoso',
-        'error': 'Error'
+        'running': 'Ejecutando',
+        'ok': 'Completado',
+        'error': 'Error',
+        'recovered': 'Recuperado'
     };
-    return statusMap[status] || 'Desconocido';
+    return statusMap[status] || status;
 }
+
+async function handleJobSubmit(event) {
+    event.preventDefault();
+    
+    const folderPath = document.getElementById('folderPath').value;
+    const frequency = document.getElementById('frequency').value;
+    
+    try {
+        const response = await fetch(`${API_BASE}/jobs`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                folder_path: folderPath,
+                frequency_minutes: parseInt(frequency)
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showNotification('Tarea creada correctamente', 'success');
+            document.getElementById('jobForm').reset();
+            loadJobs();
+        } else {
+            showNotification(data.error || 'Error creando tarea', 'error');
+        }
+    } catch (error) {
+        console.error('Error creating job:', error);
+        showNotification('Error conectando con el servidor', 'error');
+    }
+}
+
+async function toggleJob(jobId, currentActive) {
+    try {
+        const response = await fetch(`${API_BASE}/jobs/${jobId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                active: currentActive ? 0 : 1
+            })
+        });
+        
+        if (response.ok) {
+            showNotification('Tarea actualizada correctamente', 'success');
+            loadJobs();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Error actualizando tarea', 'error');
+        }
+    } catch (error) {
+        console.error('Error toggling job:', error);
+        showNotification('Error conectando con el servidor', 'error');
+    }
+}
+
+async function deleteJob(jobId) {
+    if (!confirm('¿Está seguro de que desea eliminar esta tarea?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE}/jobs/${jobId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Tarea eliminada correctamente', 'success');
+            loadJobs();
+        } else {
+            const data = await response.json();
+            showNotification(data.error || 'Error eliminando tarea', 'error');
+        }
+    } catch (error) {
+        console.error('Error deleting job:', error);
+        showNotification('Error conectando con el servidor', 'error');
+    }
+}
+
+// Logs Management
+async function loadLogs() {
+    try {
+        const response = await fetch(`${API_BASE}/logs`);
+        const logs = await response.json();
+        
+        displayLogs(logs);
+    } catch (error) {
+        console.error('Error loading logs:', error);
+        document.getElementById('logsContainer').innerHTML = '<p>Error cargando logs</p>';
+    }
+}
+
+function displayLogs(logs) {
+    const logsContainer = document.getElementById('logsContainer');
+    
+    if (logs.length === 0) {
+        logsContainer.innerHTML = '<p>No hay logs disponibles</p>';
+        return;
+    }
+    
+    logsContainer.innerHTML = logs.map(log => `
+        <div class="log-entry log-${log.level}">
+            <strong>${new Date(log.timestamp).toLocaleString()}</strong> 
+            [${log.level.toUpperCase()}] 
+            ${log.folder_path ? `[${log.folder_path}]` : ''} 
+            ${log.message}
+        </div>
+    `).join('');
+}
+
+async function refreshLogs() {
+    await loadLogs();
+    showNotification('Logs actualizados', 'success');
+}
+
+// Utility Functions
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 5px;
+        color: white;
+        font-weight: bold;
+        z-index: 1000;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    // Set background color based on type
+    const colors = {
+        success: '#28a745',
+        error: '#dc3545',
+        warning: '#ffc107',
+        info: '#007bff'
+    };
+    notification.style.backgroundColor = colors[type] || colors.info;
+    
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    // Remove notification after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            document.body.removeChild(notification);
+        }, 300);
+    }, 3000);
+}
+
+// Add CSS for notifications
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);

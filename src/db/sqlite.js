@@ -6,7 +6,7 @@ let db = null;
 
 function getDB() {
   if (!db) {
-    throw new Error('Base de datos no inicializada. Llama a initDatabase() primero.');
+    throw new Error('Database not initialized. Call initDatabase() first.');
   }
   return db;
 }
@@ -17,10 +17,10 @@ async function initDatabase() {
     
     db = new sqlite3.Database(dbPath, (err) => {
       if (err) {
-        console.error('Error conectando a SQLite:', err);
+        console.error('Error opening database:', err);
         reject(err);
       } else {
-        console.log('Conectado a la base de datos SQLite');
+        console.log('Connected to SQLite database');
         createTables().then(resolve).catch(reject);
       }
     });
@@ -56,10 +56,10 @@ async function createTables() {
 
     db.exec(migrations, (err) => {
       if (err) {
-        console.error('Error creando tablas:', err);
+        console.error('Error creating tables:', err);
         reject(err);
       } else {
-        console.log('Tablas de la base de datos inicializadas');
+        console.log('Database tables created successfully');
         resolve();
       }
     });
@@ -70,9 +70,9 @@ function closeDatabase() {
   if (db) {
     db.close((err) => {
       if (err) {
-        console.error('Error cerrando base de datos:', err);
+        console.error('Error closing database:', err);
       } else {
-        console.log('Conexión a base de datos cerrada');
+        console.log('Database connection closed');
       }
     });
   }

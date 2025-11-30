@@ -31,7 +31,7 @@ const corsOptions = {
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error('No permitido por CORS'));
+      callback(new Error('Not allowed by CORS'));
     }
   },
   credentials: true,
@@ -44,10 +44,10 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Endpoint raíz para verificar que el servidor funciona
+// Root endpoint para verificar que el servidor funciona
 app.get('/', (req, res) => {
   res.json({
-    message: 'Backup System API está funcionando',
+    message: 'Backup System API is running',
     version: '1.0.0',
     endpoints: {
       jobs: '/api/jobs',
@@ -57,7 +57,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// Endpoint de verificación de estado
+// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({
     status: 'OK',
@@ -66,14 +66,14 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Rutas API
+// API Routes
 app.use('/api', routes);
 
 // Manejar rutas no encontradas
 app.use('*', (req, res) => {
   res.status(404).json({
-    error: 'Ruta no encontrada',
-    message: `La ruta ${req.originalUrl} no existe`,
+    error: 'Route not found',
+    message: `The route ${req.originalUrl} does not exist`,
     availableRoutes: {
       root: '/',
       health: '/health',
@@ -84,17 +84,17 @@ app.use('*', (req, res) => {
   });
 });
 
-// Inicializar base de datos y arrancar servidor
+// Initialize database and start server
 async function startServer() {
   try {
     await initDatabase();
-    console.log('Base de datos inicializada correctamente');
+    console.log('Database initialized successfully');
     
     app.listen(PORT, () => {
-      console.log(`🚀 Servidor ejecutándose en http://localhost:${PORT}`);
-      console.log(`📊 Verificación de estado: http://localhost:${PORT}/health`);
-      console.log(`🔌 Endpoints de la API: http://localhost:${PORT}/api/`);
-      console.log('📋 Endpoints disponibles:');
+      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log(`📊 Health check: http://localhost:${PORT}/health`);
+      console.log(`🔌 API endpoints: http://localhost:${PORT}/api/`);
+      console.log('📋 Available endpoints:');
       console.log('  - GET  /api/jobs');
       console.log('  - POST /api/jobs');
       console.log('  - PUT  /api/jobs/:id');
@@ -106,7 +106,7 @@ async function startServer() {
       console.log('  - GET  /api/logs');
     });
   } catch (error) {
-    console.error('Error al iniciar el servidor:', error);
+    console.error('Failed to start server:', error);
     process.exit(1);
   }
 }

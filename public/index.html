@@ -3,83 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Respaldo Automático</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Sistema de Respaldo Automático - PYME</title>
+    <link rel="stylesheet" href="styles.css"> 
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>📁 Sistema de Respaldo Automático</h1>
-            <div class="service-status" id="serviceStatus">
-                <span class="status-indicator" id="statusIndicator">●</span>
-                <span id="statusText">Verificando estado del servicio...</span>
+        <div class="header">
+            <h1>Sistema Autónomo de Respaldo</h1>
+            <p>Gestión de respaldos automatizados para PYMEs</p>
+        </div>
+        
+        <!-- Service Status -->
+        <div class="card">
+            <div class="service-status">
+                <div class="status-info">
+                    <h3>Estado del Servicio</h3>
+                    <span id="serviceStatus" class="status-indicator status-offline">Desconectado</span>
+                </div>
+                <div>
+                    <button class="btn btn-success" onclick="startService()">Iniciar</button>
+                    <button class="btn btn-danger" onclick="stopService()">Detener</button>
+                    <button class="btn btn-warning" onclick="restartService()">Reiniciar</button>
+                    <button class="btn btn-primary" onclick="checkStatus()">Actualizar</button>
+                </div>
             </div>
-        </header>
+        </div>
 
-        <div class="main-content">
-            <!-- Panel de Control del Servicio -->
-            <section class="service-panel">
-                <h2>🔧 Control del Servicio</h2>
-                <div class="service-controls">
-                    <button id="startService" class="btn btn-success">▶️ Iniciar Servicio</button>
-                    <button id="stopService" class="btn btn-danger">⏹️ Detener Servicio</button>
-                    <button id="restartService" class="btn btn-warning">🔄 Reiniciar Servicio</button>
-                </div>
-                <div class="service-info" id="serviceInfo">
-                    <!-- La información del servicio se cargará aquí -->
-                </div>
-            </section>
+        <!-- Navigation Tabs -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('jobs')">Tareas de Respaldo</button>
+            <button class="tab" onclick="showTab('logs')">Logs del Sistema</button>
+        </div>
 
-            <!-- Panel de Trabajos -->
-            <section class="jobs-panel">
-                <div class="panel-header">
-                    <h2>📋 Trabajos de Respaldo</h2>
-                    <button id="addJobBtn" class="btn btn-primary">➕ Nuevo Trabajo</button>
-                </div>
-                
-                <div class="jobs-grid" id="jobsGrid">
-                    <!-- Los trabajos se cargarán dinámicamente aquí -->
-                </div>
-            </section>
+        <!-- Jobs Tab -->
+        <div id="jobsTab" class="tab-content active">
+            <div class="card">
+                <h3>Nueva Tarea de Respaldo</h3>
+                <form id="jobForm">
+                    <div class="form-group">
+                        <label for="folderPath">Ruta de la Carpeta:</label>
+                        <input type="text" id="folderPath" placeholder="C:\MisCarpetas\Documentos" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="frequency">Frecuencia (minutos):</label>
+                        <select id="frequency" required>
+                            <option value="5">Cada 5 minutos</option>
+                            <option value="15">Cada 15 minutos</option>
+                            <option value="30">Cada 30 minutos</option>
+                            <option value="60" selected>Cada hora</option>
+                            <option value="360">Cada 6 horas</option>
+                            <option value="720">Cada 12 horas</option>
+                            <option value="1440">Diariamente</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Crear Tarea</button>
+                </form>
+            </div>
 
-            <!-- Panel de Registros -->
-            <section class="logs-panel">
-                <h2>📄 Registros del Sistema</h2>
-                <div class="logs-container" id="logsContainer">
-                    <!-- Los registros se cargarán aquí -->
+            <div class="card">
+                <h3>Tareas Activas</h3>
+                <div id="jobsList" class="jobs-grid">
+                    <p>Cargando tareas...</p>
                 </div>
-            </section>
+            </div>
+        </div>
+
+        <!-- Logs Tab -->
+        <div id="logsTab" class="tab-content">
+            <div class="card">
+                <h3>Logs del Sistema</h3>
+                <button class="btn btn-primary" onclick="refreshLogs()">Actualizar Logs</button>
+                <div id="logsContainer" class="logs-container">
+                    <p>Cargando logs...</p>
+                </div>
+            </div>
         </div>
     </div>
-
-    <!-- Modal para Agregar/Editar Trabajo -->
-    <div id="jobModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="modalTitle">Nuevo Trabajo de Respaldo</h3>
-                <span class="close" id="closeModal">&times;</span>
-            </div>
-            <form id="jobForm">
-                <div class="form-group">
-                    <label for="folderPath">📂 Ruta de la Carpeta:</label>
-                    <input type="text" id="folderPath" name="folderPath" required 
-                           placeholder="Ej: C:\Documentos\MisCarpetas">
-                </div>
-                <div class="form-group">
-                    <label for="frequency">⏰ Frecuencia (minutos):</label>
-                    <input type="number" id="frequency" name="frequency" required 
-                           min="1" value="60" placeholder="60">
-                </div>
-                <div class="form-actions">
-                    <button type="button" id="cancelJob" class="btn btn-secondary">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Trabajo</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- Área de notificaciones -->
-    <div id="notifications" class="notifications"></div>
 
     <script src="app.js"></script>
 </body>
