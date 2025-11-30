@@ -1,0 +1,25 @@
+{
+  "name": "automatizacion-proyecto",
+  "version": "1.0.0",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "worker": "node backupWorker.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "Sistema Autónomo de Respaldo y Recuperación de Documentos para PYMEs",
+  "dependencies": {
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6",
+    "pm2": "^5.3.0",
+    "cors": "^2.8.5",
+    "fs-extra": "^11.1.1",
+    "node-cron": "^3.0.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

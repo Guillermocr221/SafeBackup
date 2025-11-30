@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Respaldo Automático</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📁 Sistema de Respaldo Automático</h1>
+            <div class="service-status" id="serviceStatus">
+                <span class="status-indicator" id="statusIndicator">●</span>
+                <span id="statusText">Verificando estado del servicio...</span>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <!-- Panel de Control del Servicio -->
+            <section class="service-panel">
+                <h2>🔧 Control del Servicio</h2>
+                <div class="service-controls">
+                    <button id="startService" class="btn btn-success">▶️ Iniciar Servicio</button>
+                    <button id="stopService" class="btn btn-danger">⏹️ Detener Servicio</button>
+                    <button id="restartService" class="btn btn-warning">🔄 Reiniciar Servicio</button>
+                </div>
+                <div class="service-info" id="serviceInfo">
+                    <!-- La información del servicio se cargará aquí -->
+                </div>
+            </section>
+
+            <!-- Panel de Trabajos -->
+            <section class="jobs-panel">
+                <div class="panel-header">
+                    <h2>📋 Trabajos de Respaldo</h2>
+                    <button id="addJobBtn" class="btn btn-primary">➕ Nuevo Trabajo</button>
+                </div>
+                
+                <div class="jobs-grid" id="jobsGrid">
+                    <!-- Los trabajos se cargarán dinámicamente aquí -->
+                </div>
+            </section>
+
+            <!-- Panel de Registros -->
+            <section class="logs-panel">
+                <h2>📄 Registros del Sistema</h2>
+                <div class="logs-container" id="logsContainer">
+                    <!-- Los registros se cargarán aquí -->
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Modal para Agregar/Editar Trabajo -->
+    <div id="jobModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Nuevo Trabajo de Respaldo</h3>
+                <span class="close" id="closeModal">&times;</span>
+            </div>
+            <form id="jobForm">
+                <div class="form-group">
+                    <label for="folderPath">📂 Ruta de la Carpeta:</label>
+                    <input type="text" id="folderPath" name="folderPath" required 
+                           placeholder="Ej: C:\Documentos\MisCarpetas">
+                </div>
+                <div class="form-group">
+                    <label for="frequency">⏰ Frecuencia (minutos):</label>
+                    <input type="number" id="frequency" name="frequency" required 
+                           min="1" value="60" placeholder="60">
+                </div>
+                <div class="form-actions">
+                    <button type="button" id="cancelJob" class="btn btn-secondary">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Trabajo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Área de notificaciones -->
+    <div id="notifications" class="notifications"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
